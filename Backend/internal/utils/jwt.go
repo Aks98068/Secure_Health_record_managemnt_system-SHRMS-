@@ -1,4 +1,4 @@
-package utils
+package Utils
 
 import (
 	"crypto/rsa"
@@ -11,7 +11,7 @@ import (
 
 // Claims defines the custom JWT payload
 type Claims struct {
-	UserID uint64 `json:"uid"`   
+	UserID uint64 `json:"uid"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
