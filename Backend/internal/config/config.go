@@ -26,7 +26,7 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	_ = godotenv.Load("github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/config/.env")
+	_ = godotenv.Load("github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/configs/.env")
 
 	cfg := &Config{
 		ServerPort:      GetEnv("PORT", "8080"),

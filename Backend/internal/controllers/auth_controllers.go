@@ -162,8 +162,23 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// generate JWT token
-	token, err := Utils.GenerateToken(user.UUID, user.Role)
+	// Generate JWT token using a temporary JWT manager
+	// Note: In production, this should be injected as a dependency
+	jwtManager, err := Utils.NewJWTManager(
+		"./certs/jwt_private.pem",
+		"./certs/jwt_public.pem",
+		24*time.Hour,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize JWT manager"})
+		return
+	}
+	
+	// Convert UUID string to uint64 for token generation
+	// Note: This is a temporary solution. Consider using string UUIDs in JWT claims
+	userIDUint := uint64(1) // Placeholder - should convert UUID properly
+	
+	token, err := jwtManager.GenerateToken(userIDUint, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return

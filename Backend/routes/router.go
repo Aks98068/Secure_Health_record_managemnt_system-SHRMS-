@@ -3,24 +3,39 @@ package Routes
 import (
 	Controllers "github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/internal/controllers"
 	Middlewares "github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/internal/middlewares"
+	Utils "github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(router *gin.Engine) {
+// SetupRoutes configures all application routes with proper middleware chain
+func SetupRoutes(router *gin.Engine, jwtManager *Utils.JWTManager) {
+	// Apply global middlewares in optimal order
+	router.Use(
 
-	// authentication routes
+		Middlewares.LoggingMiddleware(), // Logging for all requests
+		gin.Recovery(),                  // Recovery middleware for panic handling
+	)
+
+	// Public authentication routes with security middlewares
 	auth := router.Group("/api/auth")
-	auth.Use(Middlewares.RateLimitMiddleware(), Middlewares.BruteforceMiddleware())
+	auth.Use(
+		Middlewares.RateLimitMiddleware(),  // Rate limiting for auth endpoints
+		Middlewares.BruteforceMiddleware(), // Brute force protection
+	)
 	{
-		// secure routes for login and register
+		// Authentication endpoints
 		auth.POST("/login", Controllers.LoginHandler)
 		auth.POST("/register/patient", Controllers.RegisterPatientHandler)
 		auth.POST("/register/doctor", Controllers.RegisterDoctorsHandler)
 	}
 
-	// seure APIs with grouping and  protected with Authmiddlewares
+	// Protected API routes with authentication and additional security
 	api := router.Group("/api")
-	api.Use(Middlewares.AuthMiddleware)
+	api.Use(
+		Middlewares.CORSMiddleware(),
+		Middlewares.RateLimitMiddleware(),      // Rate limiting for API calls
+		Middlewares.AuthMiddleware(jwtManager), // JWT authentication with proper dependency injection
+	)
 
 	// APIs for patient role based access control with grouping
 	patient := api.Group("/patient")

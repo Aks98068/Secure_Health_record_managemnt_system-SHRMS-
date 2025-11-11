@@ -1,6 +1,8 @@
 package Middlewares
 
 import (
+	"net/http"
+
 	Configs "github.com/Aks98068/Secure_Health_record_managemnt_system-SHRMS/internal/config"
 	"github.com/gin-gonic/gin"
 )
@@ -19,19 +21,30 @@ import (
 // This middleware sets safe defaults so that the API can be accessed
 // from our web frontend while still preventing unwanted origins.
 
- 
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		frontendURL := Configs.GetEnv("FRONTEND_URL", "http://localhost:3000")
-		c.Writer.Header().set("Access-Control-Allow-Origin", frontendURL)
-		c.Writer.Header().set("Acees-Control-Allow-Credentials", "true")
-		c.Writer.Header().set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-		c.Writer.Header().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+		// Skip CORS for frontend or static files
+		if c.Request.URL.Path == "/" ||
+			c.Request.URL.Path == "/favicon.ico" ||
+			c.Request.URL.Path == "/static" ||
+			len(c.Request.URL.Path) >= 7 && c.Request.URL.Path[:7] == "/static" {
+			c.Next()
 			return
 		}
+
+		frontendURL := Configs.GetEnv("FRONTEND_URL", "http://localhost:3000")
+
+		c.Writer.Header().Set("Access-Control-Allow-Origin", frontendURL)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
 		c.Next()
 	}
 }

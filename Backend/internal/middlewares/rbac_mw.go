@@ -18,13 +18,32 @@ import (
 
 func RoleGuard(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole := c.GetString("roles")
-		for _, role := range roles {
-			if userRole == role {
+		// Get user role from context (set by AuthMiddleware)
+		userRole := c.GetString("role") 
+		
+		// Validate that user role exists
+		if userRole == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Authentication required",
+				"code":  "AUTH_REQUIRED",
+			})
+			return
+		}
+		
+		// Check if user role matches any of the allowed roles
+		for _, allowedRole := range roles {
+			if userRole == allowedRole {
 				c.Next()
 				return
 			}
 		}
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		
+		// Enhanced error response with more context
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error":        "Access denied",
+			"code":         "INSUFFICIENT_PERMISSIONS",
+			"user_role":    userRole,
+			"required_roles": roles,
+		})
 	}
 }
