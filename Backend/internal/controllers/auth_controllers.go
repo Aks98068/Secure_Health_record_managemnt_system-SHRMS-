@@ -1,8 +1,6 @@
 package Controllers
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,180 +12,155 @@ import (
 	"github.com/google/uuid"
 )
 
+// Request struct for registration
+type RegisterRequest struct {
+	Fullname        string `json:"fullname" binding:"required"`
+	Email           string `json:"email" binding:"required,email"`
+	PhoneNumber     string `json:"phonenumber" binding:"required"`
+	Password        string `json:"password" binding:"required"`
+	ConfirmPassword string `json:"confirmpassword" binding:"required"`
+}
+
+// Request struct for login
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+	Role     string `json:"role" binding:"required"`
+}
+
+// Register patient
 func RegisterPatientHandler(c *gin.Context) {
-	//  take data form the html form
-	fullname := c.PostForm("fullname")
-	email := strings.ToLower(strings.TrimSpace(c.PostForm("name")))
-	phonenumber := c.PostForm("phonenumber")
-	password := c.PostForm("password")
-	confirmpassword := c.PostForm("confirmpassword")
-	role := "patient"
-
-	// validation
-	if fullname == "" || email == "" || phonenumber == "" || password == "" || confirmpassword == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Please fill all required fields and try again."})
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if password != confirmpassword {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Password do not match."})
+	if req.Password != req.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+		return
 	}
 
-	// check duplicate email or usename
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	// Check duplicate email
 	var existing Models.User
-	if err := Configs.DB.Where("email = ?", email).First(&existing).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "email alrady exists"})
+	if err := Configs.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
 		return
 	}
 
-	hashPassword, err := Utils.HashPassword(password)
+	hashPassword, err := Utils.HashPassword(req.Password)
 	if err != nil {
-		log.Println("password hashing faield :", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to register user."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
 	}
 
 	user := Models.User{
 		UUID:        uuid.New().String(),
-		Fullname:    fullname,
-		Email:       email,
-		PhoneNumber: phonenumber,
+		Fullname:    req.Fullname,
+		Email:       req.Email,
+		PhoneNumber: req.PhoneNumber,
 		Password:    hashPassword,
-		Role:        role,
+		Role:        "patient",
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
 
 	if err := Configs.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to register user."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register patient"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Patient registered successfully."})
+	c.JSON(http.StatusCreated, gin.H{"message": "Patient registered successfully"})
 }
 
+// Register doctor
 func RegisterDoctorsHandler(c *gin.Context) {
-
-	fullname := c.PostForm("fullname")
-	email := strings.TrimSpace(c.PostForm("email"))
-	phonenumber := strings.TrimSpace(c.PostForm("phonenumber"))
-	password := strings.TrimSpace(c.PostForm("password"))
-	confirmpassword := strings.TrimSpace(c.PostForm("confirmpassword"))
-	role := "doctor"
-
-	if fullname == "" || email == "" || phonenumber == "" || password == "" || confirmpassword == "" || role == "" {
-		fmt.Println("all field required")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "all fields are required"})
-	}
-
-	if password != confirmpassword {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "password does n"})
-	}
-
-	var existing Models.User
-	if err := Configs.DB.Where("email = ?", email).First(&existing).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "email already exist"})
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	hashedpassword, err := Utils.HashPassword(password)
+	if req.Password != req.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+		return
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	// Check duplicate email
+	var existing Models.User
+	if err := Configs.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
+		return
+	}
+
+	hashPassword, err := Utils.HashPassword(req.Password)
 	if err != nil {
-		fmt.Printf("password hashing failed")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to register User"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
 	}
 
 	user := Models.User{
 		UUID:        uuid.New().String(),
-		Fullname:    fullname,
-		Email:       email,
-		PhoneNumber: phonenumber,
-		Password:    hashedpassword,
-		Role:        role,
-		IsActive:    true,
+		Fullname:    req.Fullname,
+		Email:       req.Email,
+		PhoneNumber: req.PhoneNumber,
+		Password:    hashPassword,
+		Role:        "doctor",
+		IsActive:    false, // doctors require admin approval
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
 
 	if err := Configs.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register Doctor"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register doctor"})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Doctor created successfully"})
 
+	c.JSON(http.StatusCreated, gin.H{"message": "Doctor registered successfully. Await admin approval."})
 }
-
-var jwtSecret = []byte("")
-
 func LoginHandler(c *gin.Context) {
-
-	email := strings.TrimSpace(c.PostForm("email"))
-	password := strings.TrimSpace(c.PostForm("password"))
-	role := strings.ToLower(strings.TrimSpace(c.PostForm("role")))
-
-	if email == "" || password == "" || role == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "all fields are required"})
-	}
-	validRoles := map[string]bool{
-		"admin":   true,
-		"doctor":  true,
-		"patient": true,
-	}
-
-	if !validRoles[role] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	//fetch user by email and role
+	// Fetch user by email + role
 	var user Models.User
-	if err := Configs.DB.Where("email = ? AND  role = ?", email, role).First(&user).Error; err != nil {
+	if err := Configs.DB.Where("email = ? AND role = ?", req.Email, req.Role).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// check password (Argon2)
-	if !Utils.VerifyPassword(password, user.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect Password"})
-		return
-	}
-	// Doctors must be approved by admin
-	if role == "doctor" && user.IsActive == false {
-		c.JSON(http.StatusForbidden, gin.H{"error": "your account is pending admin approval"})
+	isMatch, err := Utils.VerifyPassword(req.Password, user.Password)
+	if err != nil || !isMatch {
+		c.JSON(401, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// Generate JWT token using a temporary JWT manager
-	// Note: In production, this should be injected as a dependency
-	jwtManager, err := Utils.NewJWTManager(
-		"./certs/jwt_private.pem",
-		"./certs/jwt_public.pem",
-		24*time.Hour,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize JWT manager"})
-		return
-	}
-	
-	// Convert UUID string to uint64 for token generation
-	// Note: This is a temporary solution. Consider using string UUIDs in JWT claims
-	userIDUint := uint64(1) // Placeholder - should convert UUID properly
-	
-	token, err := jwtManager.GenerateToken(userIDUint, user.Role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+	if req.Role == "doctor" && !user.IsActive {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Account pending admin approval"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-		"role":    role,
-	})
+	jwtManager, _ := Utils.NewJWTManager("./certs/jwt_private.pem", "./certs/jwt_public.pem", 24*time.Hour)
+	token, _ := jwtManager.GenerateToken(user.ID, user.Role)
 
+	// Set token in secure HTTP-only cookie
+	c.SetCookie("auth_token", token, 3600*24, "/", "localhost", true, true) // adjust domain for production
+
+	// Redirect to dashboard
+	if user.Role == "patient" {
+		c.Redirect(http.StatusSeeOther, "/patient/dashboard")
+		return
+	} else if user.Role == "doctor" {
+		c.Redirect(http.StatusSeeOther, "/doctor/dashboard")
+	} else {
+		c.Redirect(http.StatusSeeOther, "/admin/dashboard")
+	}
 }

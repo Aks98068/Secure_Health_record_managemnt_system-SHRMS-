@@ -2,6 +2,7 @@ package Controllers
 
 import (
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -9,11 +10,18 @@ import (
 func PatientProfile(c *gin.Context) {
 	userID := c.GetString("user_id")
 	role := c.GetString("role")
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Patient profile endpoint",
 		"user_id": userID,
 		"role":    role,
+	})
+}
+
+// BookAppointment handles appointment booking
+func BookAppointmentPage(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Book appointment endpoint - implementation pending",
 	})
 }
 
@@ -72,5 +80,15 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Delete user endpoint - implementation pending",
 		"user_id": userID,
+	})
+}
+func PatientDashboard(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	role, _ := c.Get("role")
+
+	c.HTML(http.StatusOK, "patientDashboard.html", gin.H{
+		"title":  "Patient Dashboard",
+		"userID": userID,
+		"role":   role,
 	})
 }

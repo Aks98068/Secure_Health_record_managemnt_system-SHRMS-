@@ -3,33 +3,70 @@ package Utils
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
+	"errors"
+	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
 
-// HashPassword securely hashes a plain-text password using Argon2id.
-// Argon2id is resistant to brute-force and GPU attacks, making it suitable for production.
+const (
+	memory      = 64 * 1024
+	iterations  = 3
+	parallelism = 2
+	saltLength  = 16
+	keyLength   = 32
+)
+
 func HashPassword(password string) (string, error) {
-	salt := make([]byte, 16)
-	_, _ = rand.Read(salt)
-	hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 2, 32)
-	return fmt.Sprintf("%s:%s", base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(hash)), nil
+	// generate random salt
+	salt := make([]byte, saltLength)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return "", err
+	}
+
+	// Hash
+	hash := argon2.IDKey([]byte(password), salt, iterations, memory, uint8(parallelism), keyLength)
+
+	// Combine salt + hash in BASE64
+	saltB64 := base64.StdEncoding.EncodeToString(salt)
+	hashB64 := base64.StdEncoding.EncodeToString(hash)
+
+	return saltB64 + ":" + hashB64, nil
 }
 
-// function for verifying or matching password wiht salt in Aargon2
-func VerifyPassword(password, encoded string) bool {
-	var saltB64, hashB64 string
-	fmt.Sscanf(encoded, "%[^:]:%s", &saltB64, &hashB64)
-	salt, _ := base64.RawStdEncoding.DecodeString(saltB64)
-	hash, _ := base64.RawStdEncoding.DecodeString(hashB64)
-	test := argon2.IDKey([]byte(password), salt, 3, 64*1024, 2, 32)
-	if len(test) != len(hash) {
-		return false
+// VerifyPassword compares raw password with stored salt:hash
+func VerifyPassword(password, stored string) (bool, error) {
+	parts := strings.Split(stored, ":")
+	if len(parts) != 2 {
+		return false, errors.New("invalid stored password format")
 	}
-	var diff byte
-	for i := range test {
-		diff |= test[i] ^ hash[i]
+
+	salt, err := base64.StdEncoding.DecodeString(parts[0])
+	if err != nil {
+		return false, err
 	}
-	return diff == 0
+
+	storedHash, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false, err
+	}
+
+	// Hash input password using extracted salt
+	hash := argon2.IDKey([]byte(password), salt, iterations, memory, uint8(parallelism), keyLength)
+
+	// Compare
+	if len(hash) != len(storedHash) {
+		return false, nil
+	}
+
+	// Constant-time compare
+	isMatch := true
+	for i := 0; i < len(hash); i++ {
+		if hash[i] != storedHash[i] {
+			isMatch = false
+		}
+	}
+
+	return isMatch, nil
 }

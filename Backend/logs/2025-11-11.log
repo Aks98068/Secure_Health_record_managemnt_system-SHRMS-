@@ -1,0 +1,4 @@
+[2025-11-11 12:24:23] | 200 |            0s | 172.16.0.97     | GET    / | user: | role: | UA:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0 | err:
+[2025-11-11 12:24:24] | 404 |            0s | 172.16.0.97     | GET    /favicon.ico | user: | role: | UA:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0 | err:
+[2025-11-11 12:24:24] | 404 |            0s | 172.16.0.97     | GET    /favicon.ico | user: | role: | UA:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0 | err:
+[2025-11-11 12:26:53] | 200 |      1.6116ms | 172.16.0.97     | GET    / | user: | role: | UA:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0 | err:

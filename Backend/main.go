@@ -36,8 +36,9 @@ func main() {
 	router := gin.New()
 
 	// Global middlewares applied in optimal order
-	router.Use(gin.Recovery())                  // Recovery should be first   // CORS for cross-origin requests
-	router.Use(Middlewares.LoggingMiddleware()) // Logging for all requests
+	router.Use(gin.Recovery()) // Recovery should be first   // CORS for cross-origin requests
+	router.Use(Middlewares.LoggingMiddleware())
+	router.Use(Middlewares.CORSMiddleware()) // Logging for all requests
 
 	// Serve frontend static files (fixed typo: was "Fronted")
 	router.Static("/assets", "../Frontend/assets")
@@ -49,6 +50,18 @@ func main() {
 			"title": "Secure Health Records Management System",
 		})
 	})
+
+	router.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", gin.H{
+			"title": "login",
+		})
+	})
+
+	router.GET("/register", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{"tittle": "register"})
+	})
+
+	
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
@@ -63,7 +76,7 @@ func main() {
 
 	// Server configuration with proper TLS setup
 	srv := &http.Server{
-		Addr:         "192.168.254.3:443",
+		Addr:         "192.168.1.64:443",
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -72,7 +85,7 @@ func main() {
 
 	// Start HTTPS server
 	go func() {
-		log.Println("Starting HTTPS server on https://192.168.254.3:443...")
+		log.Println("Starting HTTPS server on https://192.168.1.64:443...")
 		// Fixed method name: was "LitenAndServeTLS", should be "ListenAndServeTLS"
 		// Fixed certificate paths to be relative
 		if err := srv.ListenAndServeTLS("./certs/server.crt", "./certs/server.key"); err != nil && err != http.ErrServerClosed {
